@@ -3,13 +3,13 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-// const connectDB = require('./config/db');
+const connectDB = require('./config/db');
 
 // Load env vars
 dotenv.config();
 
 // Connect to database
-// connectDB();
+connectDB();
 
 const app = express();
 
