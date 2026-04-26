@@ -12,7 +12,7 @@ const assignmentRoutes = require("./routes/assignmentRoutes");
 dotenv.config();
 
 // Connect to database
-//connectDB();
+connectDB();
 
 const app = express();
 

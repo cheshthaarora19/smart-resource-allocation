@@ -85,32 +85,17 @@ router.post('/', protect, upload.single('image'), async (req, res) => {
 // @route   GET /api/reports
 // @desc    Get all reports (with filters)
 // @access  Protected
-router.get('/', async (req, res) => {
+router.get('/', protect, async (req, res) => {
   try {
     const { status, need_type, urgency } = req.query;
     let filter = {};
 
     if (status) filter.status = status;
     if (need_type) filter.need_type = need_type;
+    const reports = await IssueReport.find(filter)
+      .populate('reported_by', 'name email')
+      .sort({ createdAt: -1 });
 
-    const reports = [
-  {
-    _id: "1",
-    title: "Water shortage",
-    need_type: "water",
-    severity: 8,
-    people_affected: 120,
-    location: { address: "Punjabi Bagh" }
-  },
-  {
-    _id: "2",
-    title: "Food needed",
-    need_type: "food",
-    severity: 6,
-    people_affected: 80,
-    location: { address: "Rohini" }
-  }
-];
     res.json({ success: true, count: reports.length, data: reports });
 
   } catch (error) {
