@@ -1,19 +1,31 @@
 import { useState } from "react";
 import Dashboard from "./pages/Dashboard";
 import ReportIssue from "./pages/ReportIssue";
+import "./App.css";
 
 function App() {
-  const [page, setPage] = useState("dashboard");
+  const [activePage, setActivePage] = useState("dashboard");
 
   return (
-    <div>
-      <h1>Smart Resource Allocation System</h1>
+    <div className="app-container">
+      {/* Sidebar */}
+      <div className="sidebar">
+        <h2>SRAS</h2>
+        <button onClick={() => setActivePage("dashboard")}>
+          Dashboard
+        </button>
+        <button onClick={() => setActivePage("report")}>
+          Report Issue
+        </button>
+      </div>
 
-      <button onClick={() => setPage("dashboard")}>Dashboard</button>
-      <button onClick={() => setPage("report")}>Report Issue</button>
+      {/* Main Content */}
+      <div className="main-content">
+        <h1>Smart Resource Allocation System</h1>
 
-      {page === "dashboard" && <Dashboard />}
-      {page === "report" && <ReportIssue />}
+        {activePage === "dashboard" && <Dashboard />}
+        {activePage === "report" && <ReportIssue />}
+      </div>
     </div>
   );
 }

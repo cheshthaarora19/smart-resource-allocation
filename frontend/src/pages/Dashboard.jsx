@@ -20,15 +20,25 @@ const Dashboard = () => {
     <div>
       <h2>Dashboard</h2>
 
-      {tasks.map((task) => (
-        <div key={task.id} style={{border: "1px solid black", margin: "10px", padding: "10px"}}>
-          <h3>{task.title}</h3>
-          <p>Location: {task.location}</p>
-          <p>Priority: {task.priority}</p>
-          <p>Status: {task.status}</p>
-        </div>
-      ))}
-
+      <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+        {tasks.map((task) => (
+          <div
+            key={task.id}
+            style={{
+              background: "white",
+              padding: "20px",
+              borderRadius: "10px",
+              width: "250px",
+              boxShadow: "0 2px 5px rgba(0,0,0,0.1)"
+            }}
+          >
+            <h3>{task.title}</h3>
+            <p><strong>Location:</strong> {task.location}</p>
+            <p><strong>Priority:</strong> {task.priority}</p>
+            <p><strong>Status:</strong> {task.status}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
