@@ -117,5 +117,50 @@ router.get('/:id/priority', protect, async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 });
+// @route   GET /api/reports/my-reports
+// @desc    Citizen sees their own submitted reports
+// @access  Protected
+router.get('/my-reports', protect, async (req, res) => {
+  try {
+    const reports = await IssueReport.find({ reported_by: req.user._id })
+      .sort({ createdAt: -1 });
 
+    res.json({ success: true, count: reports.length, data: reports });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// @route   GET /api/reports/:id/status
+// @desc    Citizen tracks their report status
+// @access  Protected
+router.get('/:id/status', protect, async (req, res) => {
+  try {
+    const report = await IssueReport.findById(req.params.id)
+      .select('title status need_type severity people_affected createdAt location');
+
+    if (!report) {
+      return res.status(404).json({ success: false, message: 'Report not found' });
+    }
+
+    // Get priority score for this report
+    const priority = await PriorityScore.findOne({ report_id: req.params.id })
+      .select('priority_score urgency_level explanation');
+
+    res.json({
+      success: true,
+      data: {
+        report,
+        priority,
+        message: report.status === 'pending'
+          ? 'Your report is under review'
+          : report.status === 'assigned'
+          ? 'A volunteer has been assigned to your report'
+          : 'Your report has been resolved. Thank you!'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 module.exports = router;
