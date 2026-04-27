@@ -7,6 +7,7 @@ const connectDB = require('./config/db');
 const testRoutes = require("./routes/test.routes");
 const matchRoutes = require("./routes/matchRoutes");
 const assignmentRoutes = require("./routes/assignmentRoutes");
+const taskRoutes = require("./routes/taskRoutes");
 
 // Load env vars
 dotenv.config();
@@ -31,6 +32,7 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/reports', require('./routes/reportRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/volunteers', require('./routes/volunteerRoutes'));
+app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use("/", testRoutes);
 // Health check route (very useful for teammates to verify your server is running)
 app.get('/api/health', (req, res) => {
