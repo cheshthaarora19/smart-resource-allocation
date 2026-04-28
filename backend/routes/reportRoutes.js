@@ -7,6 +7,7 @@ const { extractTextFromImage } = require('../services/ocrService');
 const { categorizeNeedType, calculatePriorityScore } = require('../services/priorityService');
 const { checkDuplicate } = require('../services/duplicateService');
 const { protect } = require('../middleware/authMiddleware');
+const { categorizeWithGemini, explainPriorityWithGemini } = require('../services/geminiService');
 
 // @route   POST /api/reports
 // @desc    Submit a new issue report (with optional image)
@@ -31,8 +32,11 @@ router.post('/', protect, upload.single('image'), async (req, res) => {
     }
 
     // Auto-categorize from description if still not set
+    // Auto-categorize using Gemini first, fallback to keyword NLP
     if (!need_type && description) {
-      need_type = categorizeNeedType(description);
+      const geminiCategory = await categorizeWithGemini(description);
+      need_type = geminiCategory || categorizeNeedType(description);
+      console.log(`🤖 Gemini categorized as: ${need_type}`);
     }
 
     // Check for duplicate
@@ -55,17 +59,30 @@ router.post('/', protect, upload.single('image'), async (req, res) => {
     });
 
     // Calculate and store priority score
-    const { priority_score, urgency_level, explanation } = calculatePriorityScore(
+    const { priority_score, urgency_level, explanation: formulaExplanation } = calculatePriorityScore(
       parseInt(severity),
       parseInt(people_affected)
     );
 
-    await PriorityScore.create({
-      report_id: report._id,
+    // Get Gemini-powered explanation, fallback to formula
+    const geminiExplanation = await explainPriorityWithGemini({
+      title,
+      need_type,
+      severity: parseInt(severity),
+      people_affected: parseInt(people_affected),
+      location: address || 'Unknown location',
       priority_score,
-      urgency_level,
-      explanation
+      urgency_level
     });
+
+const finalExplanation = geminiExplanation || formulaExplanation;
+
+await PriorityScore.create({
+  report_id: report._id,
+  priority_score,
+  urgency_level,
+  explanation: finalExplanation
+});
 
     res.status(201).json({
       success: true,
