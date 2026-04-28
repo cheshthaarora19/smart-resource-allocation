@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { getTasks, getVolunteers, reportIssue, assignVolunteer, updateTaskStatus, updateVolunteerAvailability, getAnalytics } from "./api/index.js";
-import Login from "./Login";
+import { getTasks, getVolunteers, reportIssue, assignVolunteer, updateTaskStatus, updateVolunteerAvailability, getAnalytics, login, getToken, clearToken } from "./api/index.js";
 
 // ─── Fallback mock data (used if backend is offline) ─────────────────────────
 const MOCK_TASKS = [
@@ -471,19 +470,19 @@ function VolunteerInterface({ tasks, setTasks, volunteers, setVolunteers, offlin
 
   const toggleAvail = async () => {
     const next = me.availability === "available" ? "offline" : "available";
-    try { await updateVolunteerAvailability({ id: ME_ID, availability: next }); } catch (_) {}
+    try { await updateVolunteerAvailability({ volunteer_id: ME_ID, availability: next }); } catch (_) {}
     setVolunteers(vs => vs.map(v => v.id === ME_ID ? { ...v, availability: next } : v));
     showToast(`Status set to ${next}`);
   };
 
   const startTask = async id => {
-    try { await updateTaskStatus({ id, status: "in_progress" }); } catch (_) {}
+    try { await updateTaskStatus({ task_id: id, status: "in_progress" }); } catch (_) {}
     setTasks(ts => ts.map(t => t.id === id ? { ...t, status: "in_progress" } : t));
     showToast("Task started!");
   };
 
   const completeTask = async id => {
-    try { await updateTaskStatus({ id, status: "completed" }); } catch (_) {}
+    try { await updateTaskStatus({ task_id: id, status: "completed" }); } catch (_) {}
     setTasks(ts => ts.map(t => t.id === id ? { ...t, status: "completed" } : t));
     setVolunteers(vs => vs.map(v => v.id === ME_ID ? { ...v, tasks_completed: v.tasks_completed + 1, availability: "available", current_task_id: null } : v));
     showToast("Task completed! Great work 🎉");
@@ -619,6 +618,62 @@ function VolunteerInterface({ tasks, setTasks, volunteers, setVolunteers, offlin
   );
 }
 
+// ─── LOGIN SCREEN ────────────────────────────────────────────────────────────
+function LoginScreen({ onLogin }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const submit = async () => {
+    if (!email || !password) return;
+    setLoading(true);
+    setError("");
+    const res = await login({ email, password });
+    setLoading(false);
+    if (res?.success) {
+      onLogin(res.user);
+    } else {
+      setError(res?.message || "Login failed. Check credentials.");
+    }
+  };
+
+  return (
+    <div style={{ fontFamily: "'DM Sans','Segoe UI',sans-serif", background: "#0f1117", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap'); * { box-sizing: border-box; margin: 0; padding: 0; } input { font-family: inherit; }`}</style>
+      <div style={{ background: "#161b27", border: "1px solid #1e2738", borderRadius: 14, padding: 36, width: 380, maxWidth: "90vw" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 28 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: "#6366f1", display: "flex", alignItems: "center", justifyContent: "center" }}>🌐</div>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9" }}>CommunityBridge</div>
+            <div style={{ fontSize: 11, color: "#475569" }}>Smart Resource Allocation</div>
+          </div>
+        </div>
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6, display: "block" }}>Email</label>
+          <input value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com"
+            style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #1e2738", background: "#0f1117", color: "#e2e8f0", fontSize: 14, outline: "none" }}
+            onKeyDown={e => e.key === "Enter" && submit()} />
+        </div>
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 6, display: "block" }}>Password</label>
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••"
+            style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #1e2738", background: "#0f1117", color: "#e2e8f0", fontSize: 14, outline: "none" }}
+            onKeyDown={e => e.key === "Enter" && submit()} />
+        </div>
+        {error && <div style={{ background: "#450a0a", border: "1px solid #7f1d1d", borderRadius: 8, padding: "9px 12px", fontSize: 13, color: "#fca5a5", marginBottom: 14 }}>{error}</div>}
+        <button onClick={submit} disabled={loading || !email || !password}
+          style={{ width: "100%", padding: "10px", borderRadius: 8, border: "none", background: "#6366f1", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", opacity: loading || !email || !password ? 0.5 : 1 }}>
+          {loading ? "Signing in…" : "Sign In"}
+        </button>
+        <div style={{ marginTop: 16, padding: "10px 12px", background: "#0f1117", borderRadius: 8, fontSize: 12, color: "#64748b" }}>
+          Use credentials from your backend DB or run the seed script first.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── ROOT APP ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [view, setView]             = useState("ngo");
@@ -627,9 +682,22 @@ export default function App() {
   const [analytics, setAnalytics]   = useState(null);
   const [loading, setLoading]       = useState(true);
   const [offline, setOffline]       = useState(false);
+  const [user, setUser]             = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
-  // ── Load all data from backend on mount ──────────────────────────────────────
+  // Check if already logged in (token in localStorage)
   useEffect(() => {
+    const token = getToken();
+    if (token) {
+      // Try to load data — if it works, we're still logged in
+      setUser({ name: "User", role: "admin" }); // placeholder until /api/auth/me exists
+    }
+    setAuthChecked(true);
+  }, []);
+
+  // ── Load all data from backend on mount / after login ──────────────────────
+  useEffect(() => {
+    if (!user) return;
     const load = async () => {
       setLoading(true);
       const [t, v, a] = await Promise.all([getTasks(), getVolunteers(), getAnalytics()]);
@@ -648,7 +716,17 @@ export default function App() {
       setLoading(false);
     };
     load();
-  }, []);
+  }, [user]);
+
+  const handleLogout = () => {
+    clearToken();
+    setUser(null);
+    setTasks([]);
+    setVolunteers([]);
+  };
+
+  if (!authChecked) return null;
+  if (!user) return <LoginScreen onLogin={setUser} />;
 
   return (
     <div style={{ fontFamily: "'DM Sans','Segoe UI',sans-serif", background: "#0f1117", minHeight: "100vh", color: "#e2e8f0" }}>
@@ -670,10 +748,11 @@ export default function App() {
           <span style={{ fontSize: 17, fontWeight: 700, color: "#f1f5f9" }}>CommunityBridge</span>
           <span style={{ fontSize: 11, color: "#475569", marginLeft: 4 }}>Smart Resource Allocation</span>
         </div>
-        <div style={{ display: "flex", gap: 4 }}>
+        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
           {[["ngo","🏢 NGO Dashboard"],["volunteer","🙋 Volunteer View"]].map(([v,label]) => (
             <button key={v} onClick={() => setView(v)} style={{ padding: "6px 16px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500, background: view === v ? "#6366f1" : "transparent", color: view === v ? "#fff" : "#94a3b8" }}>{label}</button>
           ))}
+          <button onClick={handleLogout} style={{ marginLeft: 8, padding: "6px 12px", borderRadius: 6, border: "1px solid #1e2738", background: "none", color: "#64748b", cursor: "pointer", fontSize: 12 }}>Logout</button>
         </div>
       </div>
 
@@ -689,7 +768,7 @@ export default function App() {
         {view === "volunteer" && (
           <>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: "#f1f5f9", marginBottom: 6 }}>Volunteer Interface</h1>
-            <p style={{ fontSize: 13, color: "#64748b", marginBottom: 24 }}>Viewing as <strong style={{ color: "#6366f1" }}>Ravi Kumar</strong> — manage your tasks and availability.</p>
+            <p style={{ fontSize: 13, color: "#64748b", marginBottom: 24 }}>Viewing as <strong style={{ color: "#6366f1" }}>{user?.name || "Volunteer"}</strong> — manage your tasks and availability.</p>
             {loading ? <Spinner /> : <VolunteerInterface tasks={tasks} setTasks={setTasks} volunteers={volunteers} setVolunteers={setVolunteers} offline={offline} />}
           </>
         )}
