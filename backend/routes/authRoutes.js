@@ -28,6 +28,17 @@ router.post('/register', async (req, res) => {
       phone,
       location
     });
+    // Create volunteer profile if role is volunteer
+    if (role === 'volunteer') {
+      const VolunteerProfile = require('../models/VolunteerProfile');
+      await VolunteerProfile.create({
+        user_id: user._id,
+        skills: [],
+        availability: 'available',
+        rating: 0,
+        tasks_completed: 0
+      });
+    }
 
     // Generate token
     const token = jwt.sign(
